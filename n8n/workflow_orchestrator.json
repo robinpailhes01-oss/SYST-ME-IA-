@@ -1,0 +1,246 @@
+{
+  "name": "consulting_orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulting/orchestrator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook (POST /orchestrator)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "consulting-orchestrator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Body: a single lead payload OR { lead_id: '...' } if the lead is already in DB.\nconst input = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\nif (headers['x-webhook-secret'] !== $vars.WEBHOOK_SECRET) {\n  throw new Error('Unauthorized');\n}\nreturn [{ json: input }];"
+      },
+      "id": "node_validate",
+      "name": "Validate input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_pipeline_logs?agent=eq.diagnoser&step=eq.completed&created_at=gte.{{ new Date(Date.now() - 3600000).toISOString() }}&select=id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Prefer", "value": "count=exact" }
+          ]
+        }
+      },
+      "id": "node_rate_check",
+      "name": "Rate-limit check (last hour)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Hard cap on leads/hour.\nconst body = $input.first().json;\nconst rows = Array.isArray(body) ? body : [];\nconst recentCount = rows.length;\nconst max = parseInt($vars.MAX_LEADS_PER_HOUR || '20', 10);\nif (recentCount >= max) {\n  throw new Error(`Rate limit hit: ${recentCount}/${max} leads diagnosed in the last hour. Pausing.`);\n}\nreturn [{ json: $('Validate input').first().json }];"
+      },
+      "id": "node_rate_gate",
+      "name": "Rate gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.N8N_BASE_URL }}/webhook/consulting/diagnoser",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $vars.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 120000, "retry": { "enable": true, "maxRetries": 1 } }
+      },
+      "id": "node_call_diag",
+      "name": "→ Diagnoser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide whether to auto-continue or stop for human review.\nconst diag = $input.first().json;\nif (diag.status !== 'ok') throw new Error('Diagnoser failed: ' + JSON.stringify(diag).slice(0, 300));\n\nconst confidence = Number(diag.confidence ?? 0);\nconst threshold = Number($vars.MIN_CONFIDENCE_AUTO || '0.6');\n\nreturn [{\n  json: {\n    lead_id: diag.lead_id,\n    diagnostic_id: diag.diagnostic_id,\n    confidence,\n    auto_continue: confidence >= threshold\n  }\n}];"
+      },
+      "id": "node_branch",
+      "name": "Confidence branch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "auto-continue",
+              "leftValue": "={{ $json.auto_continue }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node_if",
+      "name": "Confidence ≥ threshold ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 320]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_leads?id=eq.{{ $json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"quarantine\", \"notes\": \"Low confidence diagnostic — needs manual review\" }"
+      },
+      "id": "node_quarantine",
+      "name": "Mark quarantine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.N8N_BASE_URL }}/webhook/consulting/schema-builder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $vars.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $json.lead_id }}\",\n  \"diagnostic_id\": \"{{ $json.diagnostic_id }}\"\n}",
+        "options": { "timeout": 180000, "retry": { "enable": true, "maxRetries": 1 } }
+      },
+      "id": "node_call_schema",
+      "name": "→ Schema Builder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.N8N_BASE_URL }}/webhook/consulting/pitcher",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $vars.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $('Confidence branch').first().json.lead_id }}\",\n  \"diagnostic_id\": \"{{ $('Confidence branch').first().json.diagnostic_id }}\",\n  \"schema_id\": \"{{ $json.schema_id }}\"\n}",
+        "options": { "timeout": 90000, "retry": { "enable": true, "maxRetries": 1 } }
+      },
+      "id": "node_call_pitch",
+      "name": "→ Pitcher",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.N8N_BASE_URL }}/webhook/consulting/checker",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $vars.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"lead_id\": \"{{ $('Confidence branch').first().json.lead_id }}\" }",
+        "options": { "timeout": 60000, "retry": { "enable": true, "maxRetries": 1 } }
+      },
+      "id": "node_call_check",
+      "name": "→ Checker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"lead_id\": \"{{ $('Confidence branch').first().json.lead_id }}\",\n  \"diagnostic_id\": \"{{ $('Confidence branch').first().json.diagnostic_id }}\",\n  \"confidence\": {{ $('Confidence branch').first().json.confidence }},\n  \"checker\": {{ JSON.stringify($json) }},\n  \"next_step\": \"Awaiting human approval before send\"\n}",
+        "options": {}
+      },
+      "id": "node_respond_ok",
+      "name": "Respond — pipeline complete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2440, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"quarantine\",\n  \"lead_id\": \"{{ $('Confidence branch').first().json.lead_id }}\",\n  \"reason\": \"Diagnostic confidence below threshold — review manually before continuing\",\n  \"confidence\": {{ $('Confidence branch').first().json.confidence }}\n}",
+        "options": {}
+      },
+      "id": "node_respond_quarantine",
+      "name": "Respond — quarantine",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2000, 460]
+    }
+  ],
+  "connections": {
+    "Webhook (POST /orchestrator)": { "main": [[{ "node": "Validate input", "type": "main", "index": 0 }]] },
+    "Validate input":            { "main": [[{ "node": "Rate-limit check (last hour)", "type": "main", "index": 0 }]] },
+    "Rate-limit check (last hour)": { "main": [[{ "node": "Rate gate", "type": "main", "index": 0 }]] },
+    "Rate gate":                 { "main": [[{ "node": "→ Diagnoser", "type": "main", "index": 0 }]] },
+    "→ Diagnoser":               { "main": [[{ "node": "Confidence branch", "type": "main", "index": 0 }]] },
+    "Confidence branch":         { "main": [[{ "node": "Confidence ≥ threshold ?", "type": "main", "index": 0 }]] },
+    "Confidence ≥ threshold ?":  {
+      "main": [
+        [{ "node": "→ Schema Builder", "type": "main", "index": 0 }],
+        [{ "node": "Mark quarantine", "type": "main", "index": 0 }]
+      ]
+    },
+    "→ Schema Builder":          { "main": [[{ "node": "→ Pitcher", "type": "main", "index": 0 }]] },
+    "→ Pitcher":                 { "main": [[{ "node": "→ Checker", "type": "main", "index": 0 }]] },
+    "→ Checker":                 { "main": [[{ "node": "Respond — pipeline complete", "type": "main", "index": 0 }]] },
+    "Mark quarantine":           { "main": [[{ "node": "Respond — quarantine", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveExecutionProgress": true, "saveManualExecutions": true },
+  "pinData": {},
+  "tags": [{ "name": "consulting" }]
+}

@@ -1,0 +1,204 @@
+{
+  "name": "consulting_pitcher",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulting/pitcher",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook (POST /pitcher)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "consulting-pitcher"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expected: { lead_id, diagnostic_id, schema_id }\nconst input = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\nif (headers['x-webhook-secret'] !== $vars.WEBHOOK_SECRET) {\n  throw new Error('Unauthorized');\n}\nfor (const k of ['lead_id', 'diagnostic_id', 'schema_id']) {\n  if (!input[k]) throw new Error(`Missing: ${k}`);\n}\nreturn [{ json: { lead_id: input.lead_id, diagnostic_id: input.diagnostic_id, schema_id: input.schema_id } }];"
+      },
+      "id": "node_validate",
+      "name": "Validate input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_diagnostics?id=eq.{{ $json.diagnostic_id }}&select=*,consulting_leads(business_name,business_sector)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "node_fetch_diag",
+      "name": "Fetch diagnostic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_schemas?id=eq.{{ $('Validate input').first().json.schema_id }}&select=public_url",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "node_fetch_schema",
+      "name": "Fetch schema URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge diagnostic + schema URL into a single context for the prompt.\nconst diagRows = $('Fetch diagnostic').first().json;\nconst diagRow = Array.isArray(diagRows) ? diagRows[0] : diagRows;\nconst schemaRows = $input.first().json;\nconst schemaRow = Array.isArray(schemaRows) ? schemaRows[0] : schemaRows;\n\nif (!diagRow) throw new Error('Diagnostic not found');\nif (!schemaRow || !schemaRow.public_url) throw new Error('Schema URL missing');\n\nconst lead = diagRow.consulting_leads || {};\nconst diag = diagRow.raw_response || {};\nconst task1 = (diag.tasks || [])[0] || {};\n\nreturn [{\n  json: {\n    lead_id: diagRow.lead_id,\n    diagnostic_id: diagRow.id,\n    schema_id: $('Validate input').first().json.schema_id,\n    business_name: lead.business_name,\n    sector: lead.business_sector,\n    task_1_name: task1.name,\n    task_1_hours: task1.hours_lost_weekly,\n    pitch_hook: diag.pitch_hook,\n    schema_url: schemaRow.public_url\n  }\n}];"
+      },
+      "id": "node_merge_context",
+      "name": "Merge context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $vars.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}\",\n  \"max_tokens\": 1024,\n  \"system\": \"Tu es un expert en cold outreach B2B. Tu écris des messages de prospection qui ne ressemblent PAS à du spam. Ton style: direct, humain, curiosité-first. Jamais de 'j'espère que ce message vous trouve bien'. Jamais de liste à puces. Jamais de pitch produit en premier. Tu ouvres avec leur douleur spécifique, pas avec une solution. Tu ne mentionnes JAMAIS d'outils techniques (n8n, Claude, Supabase, ManyChat, API). Tu parles uniquement en termes de résultats et de temps gagné. Tu réponds UNIQUEMENT avec du JSON valide, sans markdown, sans backticks.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\n        \"Écris un message de prospection pour ce prospect.\\n\\n\" +\n        \"Entreprise: \" + $json.business_name + \"\\n\" +\n        \"Secteur: \" + $json.sector + \"\\n\" +\n        \"Leur problème #1 identifié: \" + ($json.task_1_name || 'à identifier') + \"\\n\" +\n        \"Temps perdu estimé: \" + ($json.task_1_hours || '?') + \"h/semaine\\n\" +\n        \"Hook: \" + ($json.pitch_hook || '') + \"\\n\" +\n        \"Lien vers leur schéma personnalisé: \" + $json.schema_url + \"\\n\\n\" +\n        \"Contraintes:\\n\" +\n        \"- Maximum 120 mots par variante\\n\" +\n        \"- Commence par une observation sur leur business (pas sur toi)\\n\" +\n        \"- Mentionne le schéma comme 'j'ai préparé quelque chose pour vous'\\n\" +\n        \"- Une seule call-to-action: 'ça vaut 15 minutes ?' (varie la formulation)\\n\" +\n        \"- Ton naturel, pas corporate\\n\" +\n        \"- En français\\n\" +\n        \"- L'email peut faire jusqu'à 120 mots, le DM doit faire moins de 80 mots\\n\\n\" +\n        \"Réponds avec ce JSON exact (rien d'autre):\\n\" +\n        \"{\\\"email\\\": \\\"...\\\", \\\"dm\\\": \\\"...\\\"}\"\n      ) }}\n    }\n  ]\n}",
+        "options": { "timeout": 60000, "retry": { "enable": true, "maxRetries": 2 } }
+      },
+      "id": "node_claude_call",
+      "name": "Claude API — Pitcher",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst ctx = $('Merge context').first().json;\n\nlet text;\ntry { text = response.content[0].text; }\ncatch (e) { throw new Error('Claude response missing content[0].text'); }\n\ntext = text.trim().replace(/^```(?:json)?\\s*/, '').replace(/```\\s*$/, '');\n\nlet parsed;\ntry { parsed = JSON.parse(text); }\ncatch (e) { throw new Error('Pitcher returned non-JSON: ' + text.slice(0, 300)); }\n\nif (!parsed.email || !parsed.dm) {\n  throw new Error('Missing email or dm in pitcher output');\n}\n\nconst usage = response.usage || {};\nconst inTok = usage.input_tokens || 0;\nconst outTok = usage.output_tokens || 0;\nconst costUsd = (inTok / 1e6) * 3 + (outTok / 1e6) * 15;\n\n// Emit one item per channel — Supabase will insert both in the next batch.\nreturn [\n  {\n    json: {\n      lead_id: ctx.lead_id,\n      diagnostic_id: ctx.diagnostic_id,\n      schema_id: ctx.schema_id,\n      channel: 'email',\n      body: parsed.email,\n      tokens_in: inTok,\n      tokens_out: outTok,\n      api_cost_usd: Number(costUsd.toFixed(4))\n    }\n  },\n  {\n    json: {\n      lead_id: ctx.lead_id,\n      diagnostic_id: ctx.diagnostic_id,\n      schema_id: ctx.schema_id,\n      channel: 'instagram',\n      body: parsed.dm,\n      tokens_in: 0,\n      tokens_out: 0,\n      api_cost_usd: 0\n    }\n  }\n];"
+      },
+      "id": "node_parse_pitch",
+      "name": "Parse pitcher JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation,resolution=merge-duplicates" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $json.lead_id }}\",\n  \"diagnostic_id\": \"{{ $json.diagnostic_id }}\",\n  \"schema_id\": \"{{ $json.schema_id }}\",\n  \"channel\": \"{{ $json.channel }}\",\n  \"body\": {{ JSON.stringify($json.body) }},\n  \"agent_version\": \"pitcher-v1\"\n}",
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_insert_messages",
+      "name": "Insert messages (per channel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 320]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_leads?id=eq.{{ $('Merge context').first().json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"message_ready\" }"
+      },
+      "id": "node_update_status",
+      "name": "Update lead → message_ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_pipeline_logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $('Merge context').first().json.lead_id }}\",\n  \"agent\": \"pitcher\",\n  \"step\": \"completed\",\n  \"severity\": \"info\",\n  \"message\": \"Email + DM drafts inserted, awaiting Checker\"\n}"
+      },
+      "id": "node_log",
+      "name": "Log to pipeline_logs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"lead_id\": \"{{ $('Merge context').first().json.lead_id }}\",\n  \"messages_created\": 2\n}",
+        "options": {}
+      },
+      "id": "node_respond",
+      "name": "Respond to webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2440, 320]
+    }
+  ],
+  "connections": {
+    "Webhook (POST /pitcher)": { "main": [[{ "node": "Validate input", "type": "main", "index": 0 }]] },
+    "Validate input":  { "main": [[{ "node": "Fetch diagnostic", "type": "main", "index": 0 }]] },
+    "Fetch diagnostic":{ "main": [[{ "node": "Fetch schema URL", "type": "main", "index": 0 }]] },
+    "Fetch schema URL":{ "main": [[{ "node": "Merge context", "type": "main", "index": 0 }]] },
+    "Merge context":   { "main": [[{ "node": "Claude API — Pitcher", "type": "main", "index": 0 }]] },
+    "Claude API — Pitcher": { "main": [[{ "node": "Parse pitcher JSON", "type": "main", "index": 0 }]] },
+    "Parse pitcher JSON":{ "main": [[{ "node": "Insert messages (per channel)", "type": "main", "index": 0 }]] },
+    "Insert messages (per channel)": { "main": [[{ "node": "Update lead → message_ready", "type": "main", "index": 0 }]] },
+    "Update lead → message_ready": { "main": [[{ "node": "Log to pipeline_logs", "type": "main", "index": 0 }]] },
+    "Log to pipeline_logs": { "main": [[{ "node": "Respond to webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveExecutionProgress": true, "saveManualExecutions": true },
+  "pinData": {},
+  "tags": [{ "name": "consulting" }]
+}

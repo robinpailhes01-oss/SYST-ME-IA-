@@ -1,0 +1,28 @@
+[
+  {
+    "business_name": "Hôtel Le Mistral",
+    "business_url": "https://www.hotel-le-mistral-marseille.fr",
+    "business_sector": "hôtellerie",
+    "instagram_handle": "@hotellemistral",
+    "contact_email": "contact@hotel-le-mistral-marseille.fr",
+    "contact_name": "Marc Dubois",
+    "source": "test"
+  },
+  {
+    "business_name": "Cabinet Dentaire Saint-Charles",
+    "business_url": "https://www.dentiste-saint-charles-lyon.fr",
+    "business_sector": "santé",
+    "contact_email": "secretariat@dentiste-saint-charles-lyon.fr",
+    "contact_name": "Dr. Élise Roy",
+    "source": "test"
+  },
+  {
+    "business_name": "Agence Immobilière Atlantique",
+    "business_url": "https://www.agence-atlantique-immo.fr",
+    "business_sector": "immobilier",
+    "instagram_handle": "@agenceatlantique",
+    "contact_email": "contact@agence-atlantique-immo.fr",
+    "contact_name": "Thomas Leclerc",
+    "source": "test"
+  }
+]

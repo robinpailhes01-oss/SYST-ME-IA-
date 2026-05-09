@@ -1,0 +1,137 @@
+{
+  "name": "consulting_checker",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulting/checker",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook (POST /checker)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "consulting-checker"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expected: { lead_id }  — runs all checks against the latest pending\n// messages for this lead.\nconst input = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\nif (headers['x-webhook-secret'] !== $vars.WEBHOOK_SECRET) {\n  throw new Error('Unauthorized');\n}\nif (!input.lead_id) throw new Error('Missing: lead_id');\nreturn [{ json: { lead_id: input.lead_id } }];"
+      },
+      "id": "node_validate",
+      "name": "Validate input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_messages?lead_id=eq.{{ $json.lead_id }}&is_approved=is.null&sent_at=is.null&select=id,channel,body,word_count,schema_id,consulting_leads(business_name,business_sector,last_contact_at),consulting_diagnostics(raw_response),consulting_schemas(public_url)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" }
+          ]
+        }
+      },
+      "id": "node_fetch_messages",
+      "name": "Fetch pending messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Run quality gates. One report per message.\n// Rules:\n//   1. word_count_ok               body has fewer than 150 words\n//   2. mentions_business           message contains the business name\n//   3. mentions_pain_or_hook       message references the task or hook keyword\n//   4. has_schema_link             schema URL is present in the body OR a separate schema_id is set\n//   5. no_banned_phrases           none of the LLM/spam tells (\"j'espère que…\", \"n'hésitez pas\", \"propulsé par AI\", \"Claude\", \"GPT\", \"n8n\")\n//   6. no_recent_contact           lead.last_contact_at < 60 days ago → fail\n//   7. sector_match                diagnostic sector matches lead sector\n//   8. cta_present                 contains a question mark and a 15min/quart d'heure mention\n\nconst rows = $input.first().json;\nconst messages = Array.isArray(rows) ? rows : [rows];\nif (!messages.length) throw new Error('No pending messages found for lead');\n\nconst BANNED = [\n  /j['']espère que ce message vous trouve/i,\n  /n['']hésitez pas/i,\n  /\\bClaude\\b/i, /\\bGPT\\b/i, /\\bn8n\\b/i, /\\bSupabase\\b/i, /\\bManyChat\\b/i,\n  /propulsé par (l['']?)?\\s?AI/i,\n  /^[•\\-*]\\s/m  // bullet point at start of line\n];\n\nfunction wordCount(s) {\n  return (s || '').trim().split(/\\s+/).filter(Boolean).length;\n}\n\nconst now = Date.now();\nconst SIXTY_DAYS = 60 * 24 * 3600 * 1000;\n\nconst results = messages.map(msg => {\n  const lead = msg.consulting_leads || {};\n  const diag = msg.consulting_diagnostics || {};\n  const schema = msg.consulting_schemas || {};\n  const body = msg.body || '';\n  const diagJson = diag.raw_response || {};\n  const task1 = (diagJson.tasks || [])[0] || {};\n\n  const checks = {};\n  checks.word_count_ok       = wordCount(body) < 150;\n  checks.mentions_business   = lead.business_name ? body.toLowerCase().includes(lead.business_name.toLowerCase()) : false;\n  checks.mentions_pain_or_hook = task1.name\n    ? body.toLowerCase().includes(task1.name.toLowerCase().split(' ')[0])\n    : Boolean(diagJson.pitch_hook);\n  checks.has_schema_link     = Boolean(schema.public_url) && (msg.channel === 'instagram' || body.includes(schema.public_url) || body.toLowerCase().includes('schéma') || body.toLowerCase().includes('préparé'));\n  checks.no_banned_phrases   = !BANNED.some(re => re.test(body));\n  checks.no_recent_contact   = !lead.last_contact_at || (now - new Date(lead.last_contact_at).getTime() > SIXTY_DAYS);\n  checks.sector_match        = !diagJson.sector || !lead.business_sector || diagJson.sector.toLowerCase().includes((lead.business_sector || '').toLowerCase().slice(0, 4));\n  checks.cta_present         = /\\?/.test(body) && /(15\\s*min|quart\\s*d['']heure|appel|échange)/i.test(body);\n\n  const passed = Object.values(checks).every(Boolean);\n  const failed = Object.entries(checks).filter(([k, v]) => !v).map(([k]) => k);\n\n  return {\n    json: {\n      message_id: msg.id,\n      lead_id: $('Validate input').first().json.lead_id,\n      channel: msg.channel,\n      checks,\n      checker_passed: passed,\n      failed_rules: failed,\n      word_count: wordCount(body)\n    }\n  };\n});\n\nreturn results;"
+      },
+      "id": "node_run_checks",
+      "name": "Run quality gates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_messages?id=eq.{{ $json.message_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"checker_passed\": {{ $json.checker_passed }},\n  \"checker_report\": {{ JSON.stringify({ checks: $json.checks, failed_rules: $json.failed_rules, word_count: $json.word_count }) }}\n}",
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_save_report",
+      "name": "Save checker report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate per-channel results.\nconst items = $input.all();\nconst all_passed = items.every(i => i.json.checker_passed);\nconst summary = items.map(i => ({\n  channel: i.json.channel,\n  passed: i.json.checker_passed,\n  failed_rules: i.json.failed_rules\n}));\nreturn [{\n  json: {\n    lead_id: items[0].json.lead_id,\n    all_passed,\n    summary\n  }\n}];"
+      },
+      "id": "node_aggregate",
+      "name": "Aggregate results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_pipeline_logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $json.lead_id }}\",\n  \"agent\": \"checker\",\n  \"step\": \"completed\",\n  \"severity\": {{ $json.all_passed ? '\"info\"' : '\"warn\"' }},\n  \"message\": {{ $json.all_passed ? '\"All quality gates passed\"' : '\"One or more checks failed\"' }},\n  \"payload\": {{ JSON.stringify($json.summary) }}\n}"
+      },
+      "id": "node_log",
+      "name": "Log to pipeline_logs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"all_passed\": {{ $('Aggregate results').first().json.all_passed }},\n  \"summary\": {{ JSON.stringify($('Aggregate results').first().json.summary) }}\n}",
+        "options": {}
+      },
+      "id": "node_respond",
+      "name": "Respond to webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 320]
+    }
+  ],
+  "connections": {
+    "Webhook (POST /checker)": { "main": [[{ "node": "Validate input", "type": "main", "index": 0 }]] },
+    "Validate input":          { "main": [[{ "node": "Fetch pending messages", "type": "main", "index": 0 }]] },
+    "Fetch pending messages":  { "main": [[{ "node": "Run quality gates", "type": "main", "index": 0 }]] },
+    "Run quality gates":       { "main": [[{ "node": "Save checker report", "type": "main", "index": 0 }]] },
+    "Save checker report":     { "main": [[{ "node": "Aggregate results", "type": "main", "index": 0 }]] },
+    "Aggregate results":       { "main": [[{ "node": "Log to pipeline_logs", "type": "main", "index": 0 }]] },
+    "Log to pipeline_logs":    { "main": [[{ "node": "Respond to webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveExecutionProgress": true, "saveManualExecutions": true },
+  "pinData": {},
+  "tags": [{ "name": "consulting" }]
+}

@@ -1,0 +1,85 @@
+{
+  "name": "consulting_scout_manual",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulting/scout-manual",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook (POST /scout-manual)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "consulting-scout-manual"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Manual entry point: I curl this with a single lead OR a list of leads.\n// Body shapes accepted:\n//   { business_name, business_url, business_sector, ... }\n//   { leads: [ {...}, {...} ] }\nconst input = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\nif (headers['x-webhook-secret'] !== $vars.WEBHOOK_SECRET) {\n  throw new Error('Unauthorized');\n}\n\nconst raw = Array.isArray(input.leads) ? input.leads : [input];\nconst leads = raw.filter(l => l && l.business_name && l.business_url && l.business_sector);\nif (!leads.length) throw new Error('No valid leads — required fields: business_name, business_url, business_sector');\n\nreturn leads.map(l => ({ json: { ...l, source: l.source || 'manual' } }));"
+      },
+      "id": "node_validate",
+      "name": "Validate batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_leads?on_conflict=business_url",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=ignore-duplicates,return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"business_name\": {{ JSON.stringify($json.business_name) }},\n  \"business_url\": {{ JSON.stringify($json.business_url) }},\n  \"business_sector\": {{ JSON.stringify(String($json.business_sector).toLowerCase()) }},\n  \"instagram_handle\": {{ $json.instagram_handle ? JSON.stringify($json.instagram_handle) : 'null' }},\n  \"contact_email\": {{ $json.contact_email ? JSON.stringify($json.contact_email) : 'null' }},\n  \"contact_name\": {{ $json.contact_name ? JSON.stringify($json.contact_name) : 'null' }},\n  \"source\": {{ JSON.stringify($json.source) }},\n  \"status\": \"new\"\n}",
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_insert",
+      "name": "Upsert leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all created/updated lead ids.\nconst items = $input.all();\nconst ids = [];\nfor (const it of items) {\n  const rows = Array.isArray(it.json) ? it.json : [it.json];\n  for (const r of rows) {\n    if (r && r.id) ids.push(r.id);\n  }\n}\nreturn [{ json: { count: ids.length, lead_ids: ids } }];"
+      },
+      "id": "node_collect",
+      "name": "Collect lead_ids",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"leads_created\": {{ $json.count }},\n  \"lead_ids\": {{ JSON.stringify($json.lead_ids) }}\n}",
+        "options": {}
+      },
+      "id": "node_respond",
+      "name": "Respond to webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 320]
+    }
+  ],
+  "connections": {
+    "Webhook (POST /scout-manual)": { "main": [[{ "node": "Validate batch", "type": "main", "index": 0 }]] },
+    "Validate batch": { "main": [[{ "node": "Upsert leads", "type": "main", "index": 0 }]] },
+    "Upsert leads":   { "main": [[{ "node": "Collect lead_ids", "type": "main", "index": 0 }]] },
+    "Collect lead_ids": { "main": [[{ "node": "Respond to webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "tags": [{ "name": "consulting" }]
+}

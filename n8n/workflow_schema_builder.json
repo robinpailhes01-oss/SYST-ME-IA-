@@ -1,0 +1,247 @@
+{
+  "name": "consulting_schema_builder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulting/schema-builder",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook (POST /schema-builder)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 320],
+      "webhookId": "consulting-schema-builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expected input: { lead_id, diagnostic_id }\n// We re-fetch the diagnostic from Supabase rather than trusting the webhook\n// payload — single source of truth.\n\nconst input = $input.first().json.body || $input.first().json;\nconst headers = $input.first().json.headers || {};\nif (headers['x-webhook-secret'] !== $vars.WEBHOOK_SECRET) {\n  throw new Error('Unauthorized');\n}\n\nif (!input.lead_id || !input.diagnostic_id) {\n  throw new Error('Required: lead_id and diagnostic_id');\n}\n\nreturn [{ json: { lead_id: input.lead_id, diagnostic_id: input.diagnostic_id } }];"
+      },
+      "id": "node_validate",
+      "name": "Validate input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_diagnostics?id=eq.{{ $json.diagnostic_id }}&select=*,consulting_leads(business_name,business_sector,business_url)",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_fetch_diag",
+      "name": "Fetch diagnostic + lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the prompt input from the joined query.\nconst rows = $input.first().json;\nconst row = Array.isArray(rows) ? rows[0] : rows;\nif (!row) throw new Error('Diagnostic not found');\n\nconst lead = row.consulting_leads || {};\nconst diag = row.raw_response || {};\nconst tasks = diag.tasks || [];\nif (tasks.length < 3) throw new Error('Diagnostic has fewer than 3 tasks');\n\n// Pick accent color by sector (used in the prompt to guide Claude).\nconst sector = (lead.business_sector || '').toLowerCase();\nconst accentMap = {\n  'hotellerie': '#d4af37', 'hôtellerie': '#d4af37', 'hotel': '#d4af37',\n  'restauration': '#e07b39', 'restaurant': '#e07b39',\n  'sante': '#3b82f6', 'santé': '#3b82f6', 'medical': '#3b82f6', 'dentaire': '#3b82f6',\n  'immobilier': '#10b981', 'realestate': '#10b981',\n  'beaute': '#ec4899', 'beauté': '#ec4899', 'esthetique': '#ec4899'\n};\nconst accent = accentMap[sector] || '#6366f1';\n\nreturn [{\n  json: {\n    lead_id: row.lead_id,\n    diagnostic_id: row.id,\n    business_name: lead.business_name,\n    business_url: lead.business_url,\n    sector: lead.business_sector,\n    accent_color: accent,\n    total_cost_annual: row.total_cost_annual,\n    total_hours_lost_weekly: row.total_hours_lost_weekly,\n    task_1: tasks[0],\n    task_2: tasks[1],\n    task_3: tasks[2]\n  }\n}];"
+      },
+      "id": "node_build_context",
+      "name": "Build prompt context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $vars.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $vars.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}\",\n  \"max_tokens\": 8192,\n  \"system\": \"Tu es un designer de systèmes AI et un expert en communication visuelle B2B. Tu génères du code HTML/CSS auto-contenu, sans dépendances externes (pas de CDN, pas d'images externes), qui représente visuellement une infrastructure AI personnalisée. Le visuel doit être professionnel, sobre, inspirant confiance à un dirigeant de PME. Tu réponds UNIQUEMENT avec le code HTML, sans markdown, sans backticks, sans préambule. Tu ne mentionnes JAMAIS d'outils techniques (n8n, Claude, Supabase, API). Tu parles uniquement en termes de résultat et de composants génériques (point d'entrée client, agent intelligent, mémoire, notification humain).\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\n        \"Génère un schéma HTML visuel complet pour ce prospect.\\n\\n\" +\n        \"Business: \" + $json.business_name + \"\\n\" +\n        \"Secteur: \" + $json.sector + \"\\n\" +\n        \"Couleur accent à utiliser: \" + $json.accent_color + \"\\n\\n\" +\n        \"Problème #1: \" + $json.task_1.name + \" — \" + $json.task_1.ai_solution + \" (coût: \" + $json.task_1.annual_cost + \"€/an)\\n\" +\n        \"Problème #2: \" + $json.task_2.name + \" — \" + $json.task_2.ai_solution + \" (coût: \" + $json.task_2.annual_cost + \"€/an)\\n\" +\n        \"Problème #3: \" + $json.task_3.name + \" — \" + $json.task_3.ai_solution + \" (coût: \" + $json.task_3.annual_cost + \"€/an)\\n\\n\" +\n        \"Économie annuelle estimée: \" + $json.total_cost_annual + \"€\\n\" +\n        \"Heures perdues par semaine: \" + $json.total_hours_lost_weekly + \"h\\n\\n\" +\n        \"Le schéma doit montrer:\\n\" +\n        \"1. Header: nom de l'entreprise + tagline 'Audit AI personnalisé'\\n\" +\n        \"2. Section AVANT: les 3 tâches manuelles avec leurs coûts en accent rouge\\n\" +\n        \"3. Section APRÈS: le système automatisé proposé, avec 4 composants génériques: Point d'entrée client → Agent intelligent → Mémoire (historique/données) → Notification humain pour les décisions critiques\\n\" +\n        \"4. Section ROI: 3 cards distinctes — Temps gagné par semaine, Économie annuelle estimée, Délai de mise en place estimé (4-6 semaines)\\n\" +\n        \"5. Footer: 'Audit confidentiel préparé pour \" + $json.business_name + \"' + 'Propulsé par Robin Pailhès — AI Consulting'\\n\\n\" +\n        \"Contraintes techniques:\\n\" +\n        \"- HTML5 valide, auto-contenu, CSS inline dans <style>\\n\" +\n        \"- Pas de JS sauf animations CSS\\n\" +\n        \"- Dark theme: fond #0a0a0f, texte #e6e6ed, accent: \" + $json.accent_color + \"\\n\" +\n        \"- Typo system: ui-sans-serif, system-ui, -apple-system, sans aucun import de fonts\\n\" +\n        \"- Largeur viewport optimisée 1200px, doit aussi être responsive < 768px\\n\" +\n        \"- Flèches entre composants en SVG inline ou caractères Unicode (→ ⟶)\\n\" +\n        \"- Pas d'images externes. Si besoin d'icônes, utilise des emojis sobres ou SVG inline simples\\n\\n\" +\n        \"Réponds UNIQUEMENT avec le HTML complet (<!DOCTYPE html>...)\"\n      ) }}\n    }\n  ]\n}",
+        "options": { "timeout": 90000, "retry": { "enable": true, "maxRetries": 2 } }
+      },
+      "id": "node_claude_call",
+      "name": "Claude API — Schema generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst ctx = $('Build prompt context').first().json;\n\nlet html;\ntry {\n  html = response.content[0].text;\n} catch (e) {\n  throw new Error('Claude response missing content[0].text');\n}\n\n// Strip stray markdown fences.\nhtml = html.trim().replace(/^```(?:html)?\\s*/, '').replace(/```\\s*$/, '');\n\nif (!html.toLowerCase().includes('<!doctype html') && !html.toLowerCase().includes('<html')) {\n  throw new Error('Output is not valid HTML — got: ' + html.slice(0, 300));\n}\n\nconst usage = response.usage || {};\nconst inTok = usage.input_tokens || 0;\nconst outTok = usage.output_tokens || 0;\nconst costUsd = (inTok / 1e6) * 3 + (outTok / 1e6) * 15;\n\nreturn [{\n  json: {\n    lead_id: ctx.lead_id,\n    diagnostic_id: ctx.diagnostic_id,\n    business_name: ctx.business_name,\n    html_content: html,\n    tokens_in: inTok,\n    tokens_out: outTok,\n    api_cost_usd: Number(costUsd.toFixed(4))\n  }\n}];"
+      },
+      "id": "node_validate_html",
+      "name": "Validate HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_schemas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $json.lead_id }}\",\n  \"diagnostic_id\": \"{{ $json.diagnostic_id }}\",\n  \"agent_version\": \"schema-builder-v1\",\n  \"html_content\": {{ JSON.stringify($json.html_content) }}\n}",
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_insert_schema",
+      "name": "Insert schema",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Upload HTML to Supabase Storage to get a public URL.\n// Filename: schemas/<lead_id>/<schema_id>.html\nconst rows = $input.first().json;\nconst row = Array.isArray(rows) ? rows[0] : rows;\nif (!row || !row.id) throw new Error('Failed to insert schema row');\n\nconst ctx = $('Validate HTML').first().json;\nconst path = `schemas/${ctx.lead_id}/${row.id}.html`;\nconst publicUrl = `${$vars.STORAGE_BUCKET_URL}/${path}`;\n\nreturn [{\n  json: {\n    schema_id: row.id,\n    lead_id: ctx.lead_id,\n    diagnostic_id: ctx.diagnostic_id,\n    html_content: ctx.html_content,\n    upload_path: path,\n    public_url: publicUrl,\n    tokens_in: ctx.tokens_in,\n    tokens_out: ctx.tokens_out,\n    api_cost_usd: ctx.api_cost_usd\n  }\n}];"
+      },
+      "id": "node_build_url",
+      "name": "Build storage path",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/storage/v1/object/consulting-schemas/{{ $json.upload_path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "text/html; charset=utf-8" },
+            { "name": "x-upsert", "value": "true" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/html",
+        "body": "={{ $json.html_content }}",
+        "options": { "retry": { "enable": true, "maxRetries": 3 } }
+      },
+      "id": "node_upload_html",
+      "name": "Upload HTML to Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 320],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_schemas?id=eq.{{ $('Build storage path').first().json.schema_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"public_url\": {{ JSON.stringify($('Build storage path').first().json.public_url) }} }"
+      },
+      "id": "node_patch_url",
+      "name": "Save public_url",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 320]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_leads?id=eq.{{ $('Build storage path').first().json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"schema_ready\" }"
+      },
+      "id": "node_update_status",
+      "name": "Update lead → schema_ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/consulting_pipeline_logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lead_id\": \"{{ $('Build storage path').first().json.lead_id }}\",\n  \"agent\": \"schema_builder\",\n  \"step\": \"completed\",\n  \"severity\": \"info\",\n  \"message\": \"Schema HTML generated and uploaded\",\n  \"payload\": {\n    \"schema_id\": \"{{ $('Build storage path').first().json.schema_id }}\",\n    \"public_url\": {{ JSON.stringify($('Build storage path').first().json.public_url) }},\n    \"tokens_in\": {{ $('Build storage path').first().json.tokens_in }},\n    \"tokens_out\": {{ $('Build storage path').first().json.tokens_out }},\n    \"api_cost_usd\": {{ $('Build storage path').first().json.api_cost_usd }}\n  }\n}"
+      },
+      "id": "node_log",
+      "name": "Log to pipeline_logs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"schema_id\": \"{{ $('Build storage path').first().json.schema_id }}\",\n  \"lead_id\": \"{{ $('Build storage path').first().json.lead_id }}\",\n  \"public_url\": {{ JSON.stringify($('Build storage path').first().json.public_url) }},\n  \"api_cost_usd\": {{ $('Build storage path').first().json.api_cost_usd }}\n}",
+        "options": {}
+      },
+      "id": "node_respond",
+      "name": "Respond to webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2880, 320]
+    }
+  ],
+  "connections": {
+    "Webhook (POST /schema-builder)": { "main": [[{ "node": "Validate input", "type": "main", "index": 0 }]] },
+    "Validate input":         { "main": [[{ "node": "Fetch diagnostic + lead", "type": "main", "index": 0 }]] },
+    "Fetch diagnostic + lead": { "main": [[{ "node": "Build prompt context", "type": "main", "index": 0 }]] },
+    "Build prompt context":   { "main": [[{ "node": "Claude API — Schema generator", "type": "main", "index": 0 }]] },
+    "Claude API — Schema generator": { "main": [[{ "node": "Validate HTML", "type": "main", "index": 0 }]] },
+    "Validate HTML":          { "main": [[{ "node": "Insert schema", "type": "main", "index": 0 }]] },
+    "Insert schema":          { "main": [[{ "node": "Build storage path", "type": "main", "index": 0 }]] },
+    "Build storage path":     { "main": [[{ "node": "Upload HTML to Storage", "type": "main", "index": 0 }]] },
+    "Upload HTML to Storage": { "main": [[{ "node": "Save public_url", "type": "main", "index": 0 }]] },
+    "Save public_url":        { "main": [[{ "node": "Update lead → schema_ready", "type": "main", "index": 0 }]] },
+    "Update lead → schema_ready": { "main": [[{ "node": "Log to pipeline_logs", "type": "main", "index": 0 }]] },
+    "Log to pipeline_logs":   { "main": [[{ "node": "Respond to webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveExecutionProgress": true, "saveManualExecutions": true },
+  "pinData": {},
+  "tags": [{ "name": "consulting" }]
+}
