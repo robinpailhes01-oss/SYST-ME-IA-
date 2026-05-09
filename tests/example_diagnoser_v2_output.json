@@ -1,0 +1,94 @@
+{
+  "_comment_": "Simulation de réponse du Diagnoser V2 pour un boutique-hôtel parisien fictif. Forme exacte de ce que renvoie le webhook /consulting/diagnoser après les 2 appels Claude. À utiliser comme contrat de référence pour le Schema Builder V2 et le Pitcher.",
+  "status": "ok",
+  "agent_version": "diagnoser-v2",
+  "lead_id": "8f3c2a1e-7b9d-4c5e-a2f1-9d8e7c6b5a4f",
+  "diagnostic_id": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+  "confidence": 0.85,
+  "auto_continue": true,
+  "api_cost_usd": 0.0623,
+  "diagnostic": {
+    "schema_version": "diagnoser-v2",
+    "business_name": "Hôtel Le Mistral",
+    "inferred_sector": "hôtellerie",
+    "inferred_subsector": "boutique-hôtel indépendant 3 étoiles",
+    "understanding": {
+      "business_name": "Hôtel Le Mistral",
+      "inferred_sector": "hôtellerie",
+      "inferred_subsector": "boutique-hôtel indépendant 3 étoiles",
+      "what_they_sell": "24 chambres dont 4 suites avec terrasse vue mer, petits-déjeuners locaux, organisation de mariages et séminaires d'entreprise jusqu'à 80 personnes, location de bateau partenaire pour excursions Calanques",
+      "target_customer": "Couples 35-55 ans en séjour romantique, entreprises locales pour séminaires, familles l'été",
+      "how_they_sell": "Réservations directes via formulaire web (avec demande de rappel téléphonique pour suites et événements), Booking.com pour les chambres standard, devis manuel pour mariages et séminaires",
+      "contact_channels": ["formulaire de contact", "téléphone", "email reservation@", "Instagram DM", "WhatsApp Business"],
+      "team_size_estimate": "small_team",
+      "price_range_visible": "high",
+      "key_services_or_offers": [
+        "Chambres standard et suites premium",
+        "Petit-déjeuner buffet local",
+        "Privatisation pour mariages",
+        "Salle séminaire 80 pers.",
+        "Excursion bateau Calanques (partenaire)"
+      ],
+      "website_quality_score": 0.8,
+      "understanding_confidence": 0.9,
+      "understanding_notes": "Site complet avec pages dédiées par offre. Tarifs visibles uniquement sur le moteur de réservation. Pas d'API publique exposée."
+    },
+    "tasks": [
+      {
+        "rank": 1,
+        "name": "Qualifier les demandes d'organisation de mariages et séminaires reçues via le formulaire web",
+        "current_manual_process": "L'équipe reçoit une demande type \"je voudrais organiser mon mariage\", appelle le client pour collecter date souhaitée, nombre d'invités, budget approximatif, type de prestation, puis prépare un devis manuellement",
+        "frequency_per_week": 6,
+        "hours_lost_weekly": 4.5,
+        "annual_cost_eur": 8190,
+        "automation_solution": "Un agent qui reçoit chaque demande sur le formulaire mariages/séminaires, pose immédiatement par email les 5 questions de qualification que l'équipe pose au téléphone (date, nombre d'invités, type de cérémonie, budget indicatif, hébergement souhaité), et envoie une grille de tarifs personnalisée dans les 3 minutes — l'équipe ne reçoit que les demandes pré-qualifiées prêtes à devis détaillé",
+        "concrete_result": "Réponse en moins de 3 minutes 24h/24, 80% des demandes pré-qualifiées avant intervention humaine, 4h/semaine récupérées",
+        "time_to_roi_months": 2,
+        "urgency": "high"
+      },
+      {
+        "rank": 2,
+        "name": "Répondre aux DM Instagram demandant disponibilités, tarifs suites et options excursion Calanques",
+        "current_manual_process": "La responsable réception consulte le DM, vérifie le calendrier de réservation, copie-colle un message-type de tarifs ou redirige vers le moteur de réservation, et propose éventuellement l'option excursion bateau",
+        "frequency_per_week": 25,
+        "hours_lost_weekly": 3.5,
+        "annual_cost_eur": 6370,
+        "automation_solution": "Un agent qui répond aux DM Instagram en moins d'une minute avec disponibilité réelle des suites, tarif de la nuitée selon la période, lien direct vers le moteur de réservation pré-rempli, et propose systématiquement l'option excursion Calanques avec photo et tarif",
+        "concrete_result": "Première réponse < 60 secondes, taux de conversion DM → réservation x2, l'option excursion proposée à 100% des leads",
+        "time_to_roi_months": 1,
+        "urgency": "high"
+      },
+      {
+        "rank": 3,
+        "name": "Envoyer les emails pré-séjour personnalisés (J-7) avec infos arrivée, parking, options petit-déjeuner et excursion",
+        "current_manual_process": "Chaque lundi, la réception télécharge la liste des arrivées de la semaine, ouvre Outlook, copie un template, le personnalise avec prénom + chambre + heure d'arrivée + options déjà cochées, et envoie un par un",
+        "frequency_per_week": 30,
+        "hours_lost_weekly": 2.5,
+        "annual_cost_eur": 4550,
+        "automation_solution": "Un agent qui détecte automatiquement les arrivées à J-7, génère et envoie l'email personnalisé avec instructions parking, options petit-déjeuner réservables en un clic, suggestion de l'excursion bateau avec créneau libre, puis archive la conversation dans le dossier client",
+        "concrete_result": "100% des clients reçoivent l'email à J-7 sans intervention, 20-30% commandent une option supplémentaire (excursion ou petit-déj premium)",
+        "time_to_roi_months": 1,
+        "urgency": "medium"
+      },
+      {
+        "rank": 4,
+        "name": "Centraliser et répondre aux demandes WhatsApp Business sur place (clients en séjour)",
+        "current_manual_process": "Les demandes WhatsApp arrivent en désordre (réveil, réservation restau, taxi, recommandation visite), la réception alterne entre WhatsApp et téléphone, des messages restent sans réponse > 30 min en haute saison",
+        "frequency_per_week": 70,
+        "hours_lost_weekly": 5,
+        "annual_cost_eur": 9100,
+        "automation_solution": "Un agent qui prend en charge les demandes WhatsApp courantes en moins de 30 secondes (réveil, recommandations, infos pratiques), et n'escalade vers la réception que les demandes nécessitant un humain (réclamation, exception)",
+        "concrete_result": "Temps de réponse moyen passé de 12 min à 30 sec, 70% des demandes traitées sans humain, satisfaction client mesurable",
+        "time_to_roi_months": 3,
+        "urgency": "medium"
+      }
+    ],
+    "total_hours_lost_weekly": 15.5,
+    "total_cost_annual": 28210,
+    "pitch_hook": "Vos demandes mariage et séminaire arrivent toutes par le formulaire — et toutes passent ensuite par le même appel de qualification de 30 minutes",
+    "schema_accent_color": "#d4af37",
+    "automation_potential_score": 0.82,
+    "understanding_confidence": 0.9,
+    "confidence": 0.88
+  }
+}
