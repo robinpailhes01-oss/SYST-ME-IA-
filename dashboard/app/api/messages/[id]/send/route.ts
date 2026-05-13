@@ -77,11 +77,9 @@ export async function POST(
     );
   }
 
-  const subject = `${lead.business_name} — quelques observations`;
-  const sandboxHeader = redirectTo
-    ? `[SANDBOX — destinataire prod: ${realRecipient ?? "(non renseigné)"}]\n\n`
-    : "";
-  const textBody = sandboxHeader + message.body;
+  const sandboxPrefix = redirectTo ? "[TEST] " : "";
+  const subject = `${sandboxPrefix}${lead.business_name} — quelques observations`;
+  const textBody = message.body;
 
   const resend = new Resend(apiKey);
   const { data: sendResult, error: sendErr } = await resend.emails.send({
