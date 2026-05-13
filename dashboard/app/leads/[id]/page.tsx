@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Diagnostic, Lead, Message, Schema } from "@/lib/types";
 import { ApproveButton } from "./approve-button";
+import { OpenInGmail } from "./open-in-gmail";
 
 export const dynamic = "force-dynamic";
 
@@ -144,7 +145,7 @@ export default async function LeadDetailPage({
         ) : (
           <ul className="space-y-4">
             {allMessages.map((msg) => (
-              <MessageCard key={msg.id} message={msg} />
+              <MessageCard key={msg.id} message={msg} lead={typedLead} />
             ))}
           </ul>
         )}
@@ -162,7 +163,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MessageCard({ message }: { message: Message }) {
+function MessageCard({ message, lead }: { message: Message; lead: Lead }) {
   const channelLabel = message.channel === "email" ? "📧 Email" : "💬 Instagram";
   const statusBadge = message.sent_at
     ? { text: "envoyé", cls: "bg-emerald-500/15 text-emerald-300" }
@@ -171,6 +172,8 @@ function MessageCard({ message }: { message: Message }) {
       : message.is_approved === false
         ? { text: "rejeté", cls: "bg-rose-500/15 text-rose-300" }
         : { text: "à valider", cls: "bg-blue-500/15 text-blue-300" };
+
+  const showGmailButton = message.channel === "email" && message.is_approved === true;
 
   return (
     <li className="rounded-md border border-[var(--border)] bg-[#0f0f17] p-4">
@@ -184,7 +187,16 @@ function MessageCard({ message }: { message: Message }) {
             <span className="text-[10px] text-[var(--muted)]">{message.word_count} mots</span>
           )}
         </div>
-        <ApproveButton messageId={message.id} initialApproved={message.is_approved} />
+        <div className="flex items-center gap-2">
+          {showGmailButton && (
+            <OpenInGmail
+              body={message.body}
+              to={lead.contact_email}
+              businessName={lead.business_name}
+            />
+          )}
+          <ApproveButton messageId={message.id} initialApproved={message.is_approved} />
+        </div>
       </div>
 
       <pre className="whitespace-pre-wrap text-sm text-[var(--fg)] font-sans">
