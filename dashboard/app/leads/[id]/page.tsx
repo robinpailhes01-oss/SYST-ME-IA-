@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Diagnostic, Lead, Message, Schema } from "@/lib/types";
 import { ApproveButton } from "./approve-button";
 import { OpenInGmail } from "./open-in-gmail";
+import { SendButton } from "./send-button";
 
 export const dynamic = "force-dynamic";
 
@@ -173,11 +174,12 @@ function MessageCard({ message, lead }: { message: Message; lead: Lead }) {
         ? { text: "rejeté", cls: "bg-rose-500/15 text-rose-300" }
         : { text: "à valider", cls: "bg-blue-500/15 text-blue-300" };
 
-  const showGmailButton = message.channel === "email" && message.is_approved === true;
+  const isApprovedEmail =
+    message.channel === "email" && message.is_approved === true;
 
   return (
     <li className="rounded-md border border-[var(--border)] bg-[#0f0f17] p-4">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{channelLabel}</span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadge.cls}`}>
@@ -187,15 +189,23 @@ function MessageCard({ message, lead }: { message: Message; lead: Lead }) {
             <span className="text-[10px] text-[var(--muted)]">{message.word_count} mots</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {showGmailButton && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {isApprovedEmail && (
+            <SendButton
+              messageId={message.id}
+              alreadySent={Boolean(message.sent_at)}
+            />
+          )}
+          {isApprovedEmail && !message.sent_at && (
             <OpenInGmail
               body={message.body}
               to={lead.contact_email}
               businessName={lead.business_name}
             />
           )}
-          <ApproveButton messageId={message.id} initialApproved={message.is_approved} />
+          {!message.sent_at && (
+            <ApproveButton messageId={message.id} initialApproved={message.is_approved} />
+          )}
         </div>
       </div>
 
