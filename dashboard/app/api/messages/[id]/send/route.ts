@@ -5,8 +5,36 @@ import {
   createSupabaseServiceClient,
 } from "@/lib/supabase/server";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function bodyToHtml(text: string): string {
+  const escaped = escapeHtml(text);
+  const linked = escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color:#6366f1;text-decoration:underline;">$1</a>',
+  );
+  return linked
+    .split(/\n{2,}/)
+    .map((para) => `<p style="margin:0 0 14px 0;line-height:1.55;">${para.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function getDashboardOrigin(request: NextRequest): string {
+  const env = process.env.NEXT_PUBLIC_DASHBOARD_URL;
+  if (env) return env.replace(/\/+$/, "");
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -81,12 +109,21 @@ export async function POST(
   const subject = `${sandboxPrefix}${lead.business_name} — quelques observations`;
   const textBody = message.body;
 
+  const origin = getDashboardOrigin(request);
+  const pixelUrl = `${origin}/api/track/open/${message.id}.gif`;
+  const htmlBody = `<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#1a1a1a;max-width:600px;">
+${bodyToHtml(textBody)}
+<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;border:0;outline:0;visibility:hidden;width:1px;height:1px;">
+</body></html>`;
+
   const resend = new Resend(apiKey);
   const { data: sendResult, error: sendErr } = await resend.emails.send({
     from: fromAddress,
     to: [effectiveRecipient],
     subject,
     text: textBody,
+    html: htmlBody,
   });
 
   if (sendErr) {
@@ -107,7 +144,10 @@ export async function POST(
   const now = new Date().toISOString();
   await service
     .from("consulting_messages")
-    .update({ sent_at: now })
+    .update({
+      sent_at: now,
+      provider_message_id: sendResult?.id ?? null,
+    })
     .eq("id", id);
   await service
     .from("consulting_leads")
@@ -124,6 +164,7 @@ export async function POST(
       to: effectiveRecipient,
       resend_id: sendResult?.id,
       sandbox: Boolean(redirectTo),
+      pixel: pixelUrl,
     },
   });
 

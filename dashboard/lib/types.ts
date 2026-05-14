@@ -89,6 +89,12 @@ export type Message = {
   reply_at: string | null;
   agent_version: string;
   created_at: string;
+  opened_at?: string | null;
+  last_opened_at?: string | null;
+  opened_count?: number;
+  relance_count?: number;
+  last_relance_at?: string | null;
+  provider_message_id?: string | null;
 };
 
 export type LeadDashboardRow = {
@@ -96,6 +102,8 @@ export type LeadDashboardRow = {
   business_name: string;
   business_sector: string | null;
   business_url: string;
+  contact_email: string | null;
+  contact_name: string | null;
   status: LeadStatus;
   lead_created_at: string;
   last_contact_at: string | null;
@@ -103,8 +111,18 @@ export type LeadDashboardRow = {
   total_hours_lost_weekly: number | null;
   total_cost_annual: number | null;
   diag_confidence: number | null;
+  pitch_hook: string | null;
+  inferred_sector: string | null;
+  inferred_subsector: string | null;
   latest_schema_id: string | null;
   schema_url: string | null;
   messages_sent_count: number;
   messages_pending_review: number;
+  messages_approved_unsent: number;
+  messages_opened_count: number;
+  last_opened_at: string | null;
+  last_pixel_hit_at: string | null;
+  total_pixel_hits: number;
+  replies_count: number;
+  last_sent_at: string | null;
 };
