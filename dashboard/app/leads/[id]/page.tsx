@@ -5,6 +5,7 @@ import type { Diagnostic, Lead, Message, Schema } from "@/lib/types";
 import { ApproveButton } from "./approve-button";
 import { OpenInGmail } from "./open-in-gmail";
 import { SendButton } from "./send-button";
+import { StatusActions } from "./status-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,9 @@ export default async function LeadDetailPage({
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--fg)]">
             {typedLead.status}
           </span>
+        </div>
+        <div className="mt-3">
+          <StatusActions leadId={typedLead.id} currentStatus={typedLead.status} />
         </div>
       </header>
 
