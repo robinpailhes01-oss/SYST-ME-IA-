@@ -59,7 +59,7 @@ export async function POST(
 
   const { data: message, error: msgErr } = await service
     .from("consulting_messages")
-    .select("id,lead_id,channel,body,is_approved,sent_at")
+    .select("id,lead_id,channel,body,subject,is_approved,sent_at")
     .eq("id", id)
     .maybeSingle();
   if (msgErr || !message) {
@@ -106,7 +106,8 @@ export async function POST(
   }
 
   const sandboxPrefix = redirectTo ? "[TEST] " : "";
-  const subject = `${sandboxPrefix}${lead.business_name} — quelques observations`;
+  const customSubject = (message as { subject?: string | null }).subject;
+  const subject = `${sandboxPrefix}${customSubject ?? `${lead.business_name} — quelques observations`}`;
   const textBody = message.body;
 
   const origin = getDashboardOrigin(request);

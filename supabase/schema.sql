@@ -111,10 +111,11 @@ create index if not exists idx_consulting_schemas_lead on public.consulting_sche
 create table if not exists public.consulting_messages (
     id              uuid primary key default gen_random_uuid(),
     lead_id         uuid not null references public.consulting_leads(id) on delete cascade,
-    diagnostic_id   uuid not null references public.consulting_diagnostics(id) on delete cascade,
+    diagnostic_id   uuid references public.consulting_diagnostics(id) on delete cascade,
     schema_id       uuid references public.consulting_schemas(id) on delete set null,
     channel         consulting_channel not null,
     body            text not null,
+    subject         text,                                  -- objet personnalisé ; fallback "<business_name> — quelques observations" si null
     word_count      int generated always as (array_length(regexp_split_to_array(body, '\s+'), 1)) stored,
     checker_passed  boolean,                               -- résultat global du Checker
     checker_report  jsonb,                                 -- détail par règle

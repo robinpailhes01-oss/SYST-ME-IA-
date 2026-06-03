@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
   const { data: queue, error: selErr } = await service
     .from("consulting_messages")
-    .select("id,lead_id,body,is_approved,sent_at,channel")
+    .select("id,lead_id,body,subject,is_approved,sent_at,channel")
     .eq("channel", "email")
     .is("sent_at", null)
     .eq("is_approved", true);
@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     const sandboxPrefix = redirectTo ? "[TEST] " : "";
-    const subject = `${sandboxPrefix}${lead.business_name} — quelques observations`;
+    const customSubject = (msg as { subject?: string | null }).subject;
+    const subject = `${sandboxPrefix}${customSubject ?? `${lead.business_name} — quelques observations`}`;
     const pixelUrl = `${origin}/api/track/open/${msg.id}.gif`;
     const htmlBody = `<!doctype html>
 <html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;color:#1a1a1a;max-width:600px;">
