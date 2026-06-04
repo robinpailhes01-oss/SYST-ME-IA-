@@ -40,8 +40,7 @@ EXAMPLE_B = ("Par exemple, en automatisant votre tâche la plus chronophage — 
 
 SIG_TEXT = (
     "Robin Pailhès\n"
-    "Automatisation & IA pour indépendants et PME\n"
-    "https://robinpailhes.fr"
+    "Automatisation & IA pour indépendants et PME"
 )
 UNSUB_TEXT = "Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message."
 
@@ -82,8 +81,7 @@ def build_one(t, variant: str):
         "<p>Si ça vous parle, répondez juste « oui » et je vous prépare ça.</p>"
         "<p>Belle journée,<br>Robin</p>"
         '<p style="color:#5f6368;font-size:13px;border-top:1px solid #e0e0e0;padding-top:10px;margin-top:18px;">'
-        'Robin Pailhès<br>Automatisation &amp; IA pour indépendants et PME<br>'
-        '<a href="https://robinpailhes.fr" style="color:#1a73e8;">robinpailhes.fr</a></p>'
+        'Robin Pailhès<br>Automatisation &amp; IA pour indépendants et PME</p>'
         '<p style="color:#9aa0a6;font-size:11px;">'
         'Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message.</p>'
         "</div>"
