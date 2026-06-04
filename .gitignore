@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 scrape.log
 scrape_progress.json
+test_render.json
