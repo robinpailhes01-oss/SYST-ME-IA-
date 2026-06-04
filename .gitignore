@@ -3,3 +3,6 @@ __pycache__/
 scrape.log
 scrape_progress.json
 test_render.json
+targets_test.json
+targets.json
+hooks_raw.json
