@@ -41,7 +41,7 @@ EXAMPLE_B = ("Par exemple, en automatisant votre tâche la plus chronophage — 
 SIG_TEXT = (
     "Robin Pailhès\n"
     "Automatisation & IA pour indépendants et PME\n"
-    "robinpailhes.fr"
+    "https://robinpailhes.fr"
 )
 UNSUB_TEXT = "Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message."
 
