@@ -1,26 +1,51 @@
 #!/usr/bin/env python3
 """Assemble personalized prospecting emails from targets.json + hooks.json.
 
-Output: drafts_plan.json -> [{business_name, greet, to, subject, text, html}, ...]
+Two variants per target (A/B test):
+  A – angle "répondre aux demandes 24/7"
+  B – angle "automatiser la tâche la plus répétitive"
+
+Output: drafts_plan.json -> [{business_name, variant, greet, to, subject, text, html}, ...]
 """
 import json, html as html_mod
 
 targets = json.load(open("targets.json"))
-hooks = json.load(open("hooks.json"))
+hooks   = json.load(open("hooks.json"))
 
-ASSISTANT = ("un assistant qui répond à vos demandes (mail / WhatsApp / Insta) "
-             "24/7 et qui qualifie les prises de contact pendant que vous travaillez")
+# ── Variant A ── messages / qualification 24/7
+ASSISTANT_A = (
+    "un assistant qui répond à vos demandes (mail / WhatsApp / Insta) "
+    "24/7 et qui qualifie les prises de contact pendant que vous travaillez"
+)
+CORE_DEFAULT_A = (
+    "J'ai automatisé 80 % de ma propre entreprise (location de yacht à Carnon). "
+    "Aujourd'hui j'installe la même chose pour des PME : " + ASSISTANT_A + "."
+)
+CORE_NEARBY_A = (
+    "Je l'ai justement automatisée à 80 %, et aujourd'hui j'installe "
+    "la même chose pour des PME : " + ASSISTANT_A + "."
+)
 
-CORE_DEFAULT = ("J'ai automatisé 80 % de ma propre entreprise (location de yacht "
-                "à Carnon). Aujourd'hui j'installe la même chose pour des PME : "
-                + ASSISTANT + ".")
-# used when the hook already mentions the yacht/Carnon, to avoid repetition
-CORE_NEARBY = ("Je l'ai justement automatisée à 80 %, et aujourd'hui j'installe "
-               "la même chose pour des PME : " + ASSISTANT + ".")
+# ── Variant B ── tâche la plus répétitive (angle plus large)
+ASSISTANT_B = (
+    "un système qui identifie votre tâche la plus chronophage "
+    "et l'automatise — devis, relances, prise de RDV, réponses clients… "
+    "pour que vous passiez votre temps là où vous avez vraiment de la valeur"
+)
+CORE_DEFAULT_B = (
+    "J'ai automatisé 80 % de ma propre entreprise (location de yacht à Carnon). "
+    "Aujourd'hui j'installe la même chose pour des PME : " + ASSISTANT_B + "."
+)
+CORE_NEARBY_B = (
+    "Je l'ai justement automatisée à 80 %, et aujourd'hui j'installe "
+    "la même chose pour des PME : " + ASSISTANT_B + "."
+)
 
-SIG_TEXT = ("Robin Pailhès\n"
-            "Automatisation & IA pour indépendants et PME\n"
-            "robinpailhes.fr")
+SIG_TEXT = (
+    "Robin Pailhès\n"
+    "Automatisation & IA pour indépendants et PME\n"
+    "robinpailhes.fr"
+)
 UNSUB_TEXT = "Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message."
 
 
@@ -28,11 +53,18 @@ def esc(s):
     return html_mod.escape(s, quote=False)
 
 
-def build_one(t):
+def build_one(t, variant: str):
     bn = t["business_name"]
-    h = hooks[bn]
+    h  = hooks[bn]
     greet, hook = h["greet"], h["hook"]
-    core = CORE_NEARBY if "Carnon" in hook else CORE_DEFAULT
+    nearby = "Carnon" in hook
+
+    if variant == "A":
+        assistant = ASSISTANT_A
+        core = CORE_NEARBY_A if nearby else CORE_DEFAULT_A
+    else:
+        assistant = ASSISTANT_B
+        core = CORE_NEARBY_B if nearby else CORE_DEFAULT_B
 
     subject = f"idée pour {greet}"
 
@@ -40,12 +72,12 @@ def build_one(t):
         f"Bonjour {greet},\n\n"
         f"{hook}\n\n"
         f"{core}\n\n"
-        f"Je vous propose un audit offert et 100 % personnalisé — concret, sans aucune obligation.\n\n"
-        f"Si ça vous parle, répondez juste « oui » et je vous prépare ça.\n\n"
+        "Je vous propose un audit offert et 100 % personnalisé — concret, sans aucune obligation.\n\n"
+        "Si ça vous parle, répondez juste « oui » et je vous prépare ça.\n\n"
         f"Belle journée,\nRobin\n\n--\n{SIG_TEXT}\n\n{UNSUB_TEXT}"
     )
 
-    core_html = esc(core).replace(esc(ASSISTANT), f"<strong>{esc(ASSISTANT)}</strong>")
+    core_html = esc(core).replace(esc(assistant), f"<strong>{esc(assistant)}</strong>")
     html = (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#202124;line-height:1.6;max-width:600px;">'
         f"<p>Bonjour {esc(greet)},</p>"
@@ -62,8 +94,8 @@ def build_one(t):
         "</div>"
     )
     return {
-        "business_name": bn, "greet": greet, "to": t["email"],
-        "subject": subject, "text": text, "html": html,
+        "business_name": bn, "variant": variant, "greet": greet,
+        "to": t["email"], "subject": subject, "text": text, "html": html,
     }
 
 
@@ -71,9 +103,14 @@ def main():
     missing = [t["business_name"] for t in targets if t["business_name"] not in hooks]
     if missing:
         raise SystemExit("Missing hooks for: " + ", ".join(missing))
-    plan = [build_one(t) for t in targets]
+
+    plan = []
+    for t in targets:
+        plan.append(build_one(t, "A"))
+        plan.append(build_one(t, "B"))
+
     json.dump(plan, open("drafts_plan.json", "w"), ensure_ascii=False, indent=2)
-    print(f"Built {len(plan)} drafts -> drafts_plan.json")
+    print(f"Built {len(plan)} drafts ({len(targets)} targets × 2 variants) -> drafts_plan.json")
 
 
 if __name__ == "__main__":
