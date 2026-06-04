@@ -20,7 +20,7 @@ CORE_NEARBY = ("Je l'ai justement automatisée à 80 %, et aujourd'hui j'install
 
 SIG_TEXT = ("Robin Pailhès\n"
             "Automatisation & IA pour indépendants et PME\n"
-            "robin.pailhes01@gmail.com")
+            "robinpailhes.fr")
 UNSUB_TEXT = "Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message."
 
 
@@ -56,7 +56,7 @@ def build_one(t):
         "<p>Belle journée,<br>Robin</p>"
         '<p style="color:#5f6368;font-size:13px;border-top:1px solid #e0e0e0;padding-top:10px;margin-top:18px;">'
         'Robin Pailhès<br>Automatisation &amp; IA pour indépendants et PME<br>'
-        '<a href="mailto:robin.pailhes01@gmail.com" style="color:#1a73e8;">robin.pailhes01@gmail.com</a></p>'
+        '<a href="https://robinpailhes.fr" style="color:#1a73e8;">robinpailhes.fr</a></p>'
         '<p style="color:#9aa0a6;font-size:11px;">'
         'Si vous ne souhaitez pas être recontacté, répondez simplement STOP à ce message.</p>'
         "</div>"
