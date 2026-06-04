@@ -104,13 +104,17 @@ def main():
     if missing:
         raise SystemExit("Missing hooks for: " + ", ".join(missing))
 
+    # A/B test: one variant per business (never both to the same recipient).
+    # Alternate A/B for a balanced, deterministic split.
     plan = []
-    for t in targets:
-        plan.append(build_one(t, "A"))
-        plan.append(build_one(t, "B"))
+    for i, t in enumerate(targets):
+        variant = "A" if i % 2 == 0 else "B"
+        plan.append(build_one(t, variant))
 
     json.dump(plan, open("drafts_plan.json", "w"), ensure_ascii=False, indent=2)
-    print(f"Built {len(plan)} drafts ({len(targets)} targets × 2 variants) -> drafts_plan.json")
+    n_a = sum(1 for d in plan if d["variant"] == "A")
+    n_b = sum(1 for d in plan if d["variant"] == "B")
+    print(f"Built {len(plan)} drafts ({n_a} variant A, {n_b} variant B) -> drafts_plan.json")
 
 
 if __name__ == "__main__":
