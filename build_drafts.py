@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Assemble personalized prospecting emails from targets.json + hooks.json.
 
-Two variants per target (A/B test):
-  A – angle "répondre aux demandes 24/7"
-  B – angle "automatiser la tâche la plus répétitive"
+Positioning: bespoke AI infrastructure — different for every business, same
+goal (grow the business serenely so the owner focuses on what matters).
+
+A/B test = which concrete example resonates more:
+  A – angle "disponibilité" (assistant qui répond 24/7)
+  B – angle "gain de temps" (automatiser la tâche la plus chronophage)
 
 Output: drafts_plan.json -> [{business_name, variant, greet, to, subject, text, html}, ...]
 """
@@ -12,34 +15,28 @@ import json, html as html_mod
 targets = json.load(open("targets.json"))
 hooks   = json.load(open("hooks.json"))
 
-# ── Variant A ── messages / qualification 24/7
-ASSISTANT_A = (
-    "un assistant qui répond à vos demandes (mail / WhatsApp / Insta) "
-    "24/7 et qui qualifie les prises de contact pendant que vous travaillez"
-)
-CORE_DEFAULT_A = (
+# ── Bloc commun : positionnement sur-mesure + bénéfice commun ──
+BENEFIT = ("faire grandir votre activité sereinement, pour que vous puissiez "
+           "vous concentrer sur l'essentiel")
+CORE_DEFAULT = (
     "J'ai automatisé 80 % de ma propre entreprise (location de yacht à Carnon). "
-    "Aujourd'hui j'installe la même chose pour des PME : " + ASSISTANT_A + "."
+    "Aujourd'hui je construis des infrastructures IA sur-mesure pour des PME. "
+    "Chaque entreprise est différente, donc chaque système l'est aussi — "
+    "mais le but est toujours le même : " + BENEFIT + "."
 )
-CORE_NEARBY_A = (
-    "Je l'ai justement automatisée à 80 %, et aujourd'hui j'installe "
-    "la même chose pour des PME : " + ASSISTANT_A + "."
+CORE_NEARBY = (
+    "Je l'ai justement automatisée à 80 %, et aujourd'hui je construis des "
+    "infrastructures IA sur-mesure pour des PME. Chaque entreprise est différente, "
+    "donc chaque système l'est aussi — mais le but est toujours le même : "
+    + BENEFIT + "."
 )
 
-# ── Variant B ── tâche la plus répétitive (angle plus large)
-ASSISTANT_B = (
-    "un système qui identifie votre tâche la plus chronophage "
-    "et l'automatise — devis, relances, prise de RDV, réponses clients… "
-    "pour que vous passiez votre temps là où vous avez vraiment de la valeur"
-)
-CORE_DEFAULT_B = (
-    "J'ai automatisé 80 % de ma propre entreprise (location de yacht à Carnon). "
-    "Aujourd'hui j'installe la même chose pour des PME : " + ASSISTANT_B + "."
-)
-CORE_NEARBY_B = (
-    "Je l'ai justement automatisée à 80 %, et aujourd'hui j'installe "
-    "la même chose pour des PME : " + ASSISTANT_B + "."
-)
+# ── Exemple concret (ce qui change entre A et B pour le test) ──
+EXAMPLE_A = ("Par exemple, un assistant qui répond à vos demandes "
+             "(mail / WhatsApp / Insta) 24/7 et qualifie vos contacts "
+             "pendant que vous travaillez.")
+EXAMPLE_B = ("Par exemple, en automatisant votre tâche la plus chronophage — "
+             "devis, relances, prise de RDV, réponses clients…")
 
 SIG_TEXT = (
     "Robin Pailhès\n"
@@ -59,12 +56,8 @@ def build_one(t, variant: str):
     greet, hook = h["greet"], h["hook"]
     nearby = "Carnon" in hook
 
-    if variant == "A":
-        assistant = ASSISTANT_A
-        core = CORE_NEARBY_A if nearby else CORE_DEFAULT_A
-    else:
-        assistant = ASSISTANT_B
-        core = CORE_NEARBY_B if nearby else CORE_DEFAULT_B
+    core = CORE_NEARBY if nearby else CORE_DEFAULT
+    example = EXAMPLE_A if variant == "A" else EXAMPLE_B
 
     subject = f"idée pour {greet}"
 
@@ -72,17 +65,19 @@ def build_one(t, variant: str):
         f"Bonjour {greet},\n\n"
         f"{hook}\n\n"
         f"{core}\n\n"
+        f"{example}\n\n"
         "Je vous propose un audit offert et 100 % personnalisé — concret, sans aucune obligation.\n\n"
         "Si ça vous parle, répondez juste « oui » et je vous prépare ça.\n\n"
         f"Belle journée,\nRobin\n\n--\n{SIG_TEXT}\n\n{UNSUB_TEXT}"
     )
 
-    core_html = esc(core).replace(esc(assistant), f"<strong>{esc(assistant)}</strong>")
+    core_html = esc(core).replace(esc(BENEFIT), f"<strong>{esc(BENEFIT)}</strong>")
     html = (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#202124;line-height:1.6;max-width:600px;">'
         f"<p>Bonjour {esc(greet)},</p>"
         f"<p>{esc(hook)}</p>"
         f"<p>{core_html}</p>"
+        f"<p>{esc(example)}</p>"
         "<p>Je vous propose un audit offert et 100 % personnalisé — concret, sans aucune obligation.</p>"
         "<p>Si ça vous parle, répondez juste « oui » et je vous prépare ça.</p>"
         "<p>Belle journée,<br>Robin</p>"
