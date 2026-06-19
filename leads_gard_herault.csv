@@ -204,8 +204,6 @@ Artisan Gorgan,BTP,Pont-Saint-Esprit,artisangorgan@icloud.com
 AFP Plomberie Chauffage,BTP,Le Grau-du-Roi,fabien.martorell@sfr.fr
 SUD Plomberie,BTP,Le Grau-du-Roi,contact.sudplomberie30@gmail.com
 Nimotel,Restauration,Nîmes,contact@nimotel.com
-Hôtel et Villa Majestic,Restauration,Nîmes,reception@majestichotel.fr
-Hôtel C Suites,Restauration,Nîmes,contact@c-suites.fr
 Le Resto,Restauration,Nîmes,info@leresto-nimes.com
 Le Bistroquet,Restauration,Nîmes,contact@le-bistroquet-nimes.fr
 Le Lisita,Restauration,Nîmes,restaurant@lelisita.com
@@ -214,16 +212,12 @@ L'Occitane Traiteur,Restauration,Nîmes,loccitanetraiteur@gmail.com
 Mas Merlet Traiteur,Restauration,Nîmes,contact@mas-merlet.com
 Dubois Traiteur,Restauration,Manduel,contact@dubois-traiteur-nimes.com
 Le Riche,Restauration,Alès,contact@leriche.fr
-Campanile Alès Centre,Restauration,Alès,ales.centre@campanile.fr
-Hôtel L'Escale d'Alès,Restauration,Alès,contact@escale-ales-hotel.com
 Domaine Val de Cèze,Restauration,Bagnols-sur-Cèze,contact@domainevaldeceze.fr
 Auberge d'Uzès,Restauration,Uzès,auberge-uzes@wanadoo.fr
-Hôtel Uzès Pont du Gard,Restauration,Uzès,reception@hoteluzes.com
 Auberge Gardoise,Restauration,Vallerargues,contact@auberge-gardoise.com
 Inari Okami,Restauration,Beaucaire,contact.inariokami@gmail.com
 Les Vignes Blanches,Restauration,Beaucaire,contact@lesvignesblanches.com
 Le Saint Louis,Restauration,Aigues-Mortes,contact@lesaintlouis.fr
-Splendid Hôtel Camargue,Restauration,Le Grau-du-Roi,contact@splendid-camargue.com
 Oustau Camarguen,Restauration,Le Grau-du-Roi,contact@oustaucamarguen.com
 Atelier des Halles,Restauration,Saint-Gilles,gl.restauration@orange.fr
 Brasserie Le Cartel,Restauration,Vauvert,contact@brasserielecartel.fr
@@ -234,69 +228,47 @@ Emiko,Restauration,Montpellier,contact@emikomontpellier.fr
 L'Aveyronnais,Restauration,Montpellier,communication.aveyronnais@gmail.com
 BlackBeef,Restauration,Montpellier,contact.blackbeef@gmail.com
 Céna,Restauration,Montpellier,contact@cena-montpellier.fr
-Hôtel du Palais,Restauration,Montpellier,hoteldupalaismontpellier@gmail.com
 Agapes Traiteur,Restauration,Montpellier,contact@agapestraiteur.fr
 La Table de Cana,Restauration,Montpellier,commercial@montpelliercana.com
 Amélie Traiteur,Restauration,Montpellier,accueil@amelietraiteur.com
 Le Cristal,Restauration,Béziers,contact@le-cristal-beziers.fr
-Café Hôtel XIX,Restauration,Béziers,hello@hoteldixneuf.com
 Ô Petits Bontemps,Restauration,Béziers,olivier.bontemps@wanadoo.fr
 La Guinguette,Restauration,Sète,reservations@laguinguette-sete.fr
 La Calanque,Restauration,Sète,restaurantlacalanquesete@gmail.com
 Oh Gobie,Restauration,Sète,ohgobie@hotmail.com
-Le Grand Hôtel de Sète,Restauration,Sète,info@legrandhotelsete.com
-Hôtel Imperial,Restauration,Sète,contact@hotel-imperial-sete.com
 Arezzo,Restauration,Montpellier,contact@arezzo-montpellier.com
-Hôtel le Venezia,Restauration,Sète,info@hotel-sete.com
 Restaurant Le Sud,Restauration,La Grande-Motte,gilles.resto@gmail.com
-Margaret Hôtel Chouleur,Restauration,Nîmes,contact@margaret-hotelchouleur.fr
-Hôtel Ulysse,Restauration,Montpellier,resa@hotel-ulysse.fr
 Georgi'au,Restauration,Nîmes,contact@georgiau.fr
-Hôtel Prime,Restauration,Montpellier,hotel.prime@wanadoo.fr
 Domaine de Pradines,Restauration,Béziers,domainepradines@orange.fr
 La Cave à Manger,Restauration,Béziers,contact@caveamanger.fr
-Bistrot de l'Hôtel de Ville,Restauration,Béziers,contact@bistrotbeziers.fr
 Quai d'en Face,Restauration,Sète,restaurantquaidenface@outlook.fr
 Chez Boris,Restauration,Montpellier,contact@chezboris.com
 Hanh Phuc,Restauration,Agde,contact@hanhphuc.fr
-Hôtel Gil de France,Restauration,Cap d'Agde,contact@gildefrance.fr
 Brasserie O'Soleil,Restauration,Marseillan,o.soleil@yahoo.fr
 L'Ambre de Thau,Restauration,Bouzigues,ambredethau@aol.com
 Le Clair de Lune,Restauration,Carnon,contact@clairdelune-carnon.com
-Hôtel Neptune,Restauration,Carnon,contact@hotel-neptune.fr
 La Plancha,Restauration,Carnon,laplancha.carnon@gmail.com
 Restaurant La Chapelle,Restauration,Villeneuve-lès-Maguelone,contact@restaurantlachapelle.fr
 Le Zanzi-Bar,Restauration,Sète,lezanzibar3@gmail.com
 Le Voilis,Restauration,Le Grau d'Agde,contact@levoilis.com
 Le Divino,Restauration,Agde,contact@ledivino-agde.fr
-Hôtel de Paris,Restauration,Sète,contact@hoteldeparis-sete.com
 La Marine du Cap,Restauration,Cap d'Agde,lamarineducap@orange.fr
 Les Halles aux Poissons,Restauration,Cap d'Agde,leshalles34@sfr.fr
-Hôtel Azur,Restauration,Cap d'Agde,contact@hotelazur.com
-Hôtel La Voile d'Or,Restauration,Cap d'Agde,hotel@lavoiledor.com
-Hôtel Grand Cap,Restauration,Agde,info@hotel-grandcap.com
-BW Hôtel des Thermes,Restauration,Balaruc-les-Bains,contact@bwhoteldesthermes.com
-Hôtel Point Bleu,Restauration,Frontignan,hotelpointbleu@orange.fr
 L'Ilot du Cap'A,Restauration,Cap d'Agde,lilotducapa@sfr.fr
 Ô Caprices,Restauration,Cap d'Agde,ocaprices34@gmail.com
 La Table d'Émilie,Restauration,Marseillan,contact@la-table-demilie.com
 La Table du Théâtre,Restauration,Sète,latabledesartistes.admi@gmail.com
 Le Goût des Hôtes,Restauration,Frontignan,legoutdeshotes.frontignan@orange.fr
-Mon P'tit Hôtel,Restauration,Le Grau d'Agde,contact@mpth.fr
 L'Éventail,Restauration,Marseillan,l.eventail34@gmail.com
-Hôtel Les Dunes,Restauration,Marseillan,hotel-les-dunes@wanadoo.fr
-Hôtel Le Richmont,Restauration,Marseillan,richmonthotel@orange.fr
 La Mesa Les Pierres Blanches,Restauration,Sète,lamesa@lespierresblanches.com
 Chez Turlot,Restauration,Bouzigues,contact@chezturlot.fr
 Les Rives de Thau,Restauration,Bouzigues,restaurantlesrivesdethau@gmail.com
 Le New Wave,Restauration,Palavas-les-Flots,contact@newavepalavas.fr
-Hôtel Le Petit Baigneur,Restauration,Palavas-les-Flots,hotellepetitbaigneur@gmail.com
 Les Goélands,Restauration,Sète,zinaphil34@orange.fr
 Plage L'Infini,Restauration,Cap d'Agde,mail.infini@free.fr
 Yacht Café,Restauration,Carnon,leyachtcafe@gmail.com
 LA VITA Beach Bar,Restauration,Sète,direction@lavita-sete.com
 Le Bistro d'Hervé,Restauration,Agde,bistroherve@gmail.com
-Hôtel Port Marine,Restauration,Sète,contact@hotel-port-marine.com
 In-Fine,Restauration,Frontignan,infine.restaurant@gmail.com
 La Marine,Restauration,Sète,contact@lamarine-resto.fr
 La Côte Bleue,Restauration,Bouzigues,lacotebleue0572@orange.fr
@@ -310,8 +282,6 @@ Domaine Tarbouriech,Restauration,Marseillan,contact@domaine-tarbouriech.fr
 Le Riva,Restauration,Palavas-les-Flots,info@leriva.fr
 Le Saint-Georges,Restauration,Palavas-les-Flots,contact@restaurant-st-georges.fr
 Les Saveurs de Thau,Restauration,Mèze,lessaveursdethau@free.fr
-Hôtel Les Grenadines,Restauration,Cap d'Agde,contact@hotelgrenadines.com
-Boutique Hôtel l'Orque Bleue,Restauration,Sète,contact@orquebleue.fr
 La Casa Nostra,Restauration,Cap d'Agde,lacasanostra@laposte.net
 Jérôme Nutile,Restauration,Nîmes,contact@jerome-nutile.com
 Brasserie les Costières,Restauration,Nîmes,david.plagne@orange.fr
@@ -324,7 +294,6 @@ Fourchette des Arènes,Restauration,Nîmes,evenementielboutique@fourchette-des-a
 Magari,Restauration,Uzès,contact@magari.fr
 La Table d'Uzès,Restauration,Uzès,restaurant@lamaisonduzes.fr
 Les Carrières Serviers,Restauration,Uzès,restaurantlescarrieres@gmail.com
-Hôtel Entraigues,Restauration,Uzès,info@hotel-entraigues.com
 La Fille des Vignes,Restauration,Uzès,restaurantfdv@outlook.fr
 Solejade Traiteur,Restauration,Alès,contact@solejade.com
 Comptoir Saint-Hilaire,Restauration,Alès,contact@comptoir-saint-hilaire.com
@@ -334,16 +303,12 @@ Porte des Cévennes,Restauration,Anduze,reception@porte-cevennes.com
 Le Cabanon,Restauration,Anduze,lecabanon@groupe-tandem.fr
 Domaine de la Régalière,Restauration,Anduze,ledomainedelaregaliere@hotmail.com
 Toqu'& Traiteur,Restauration,Bagnols-sur-Cèze,toqueettraiteur@gmail.com
-Hôtel Le Maray,Restauration,Le Grau-du-Roi,lemarayhotel@orange.fr
 L'Amarette,Restauration,Le Grau-du-Roi,contact.restaurantlamarette@gmail.com
 Le Vivier,Restauration,Le Grau-du-Roi,levivierdugrau@gmail.com
 La Guinguette du Vieux Moulin,Restauration,Villeneuve-lès-Avignon,guinguetteduvieuxmoulin@gmail.com
 Le Prieuré,Restauration,Villeneuve-lès-Avignon,contact@leprieure.com
 Les Jardins de la Livrée,Restauration,Villeneuve-lès-Avignon,contact@la-livree.fr
-Hôtel La Magnaneraie,Restauration,Villeneuve-lès-Avignon,contact@najeti.fr
 La Restanque,Restauration,Saint-Gilles,sm.larestanque@gmail.com
-Logis Hôtel Le Cours,Restauration,Saint-Gilles,contact@hotel-le-cours.com
-Hôtel Héraclée,Restauration,Saint-Gilles,contact@hotel-heraclee.com
 Atelier des Halles Saint-Gilles,Restauration,Saint-Gilles,contact@atelierdeshalles.fr
 Mas de l'Olivier,Restauration,Pont-Saint-Esprit,contact@mas-olivier.com
 La Tour de Pizz,Restauration,Pont-Saint-Esprit,jesong7@hotmail.fr
@@ -356,6 +321,41 @@ A Table! Traiteur Camarguais,Restauration,Aigues-Mortes,traiteur.camarguais@gmai
 Camargue Traiteur,Restauration,Aigues-Mortes,info@camargue-traiteur.com
 La Bodega,Restauration,Aigues-Mortes,binebodega@hotmail.fr
 Au Bureau,Restauration,Nîmes,aubureaunimes30@gmail.com
+Hôtel et Villa Majestic,Hôtellerie,Nîmes,reception@majestichotel.fr
+Hôtel C Suites,Hôtellerie,Nîmes,contact@c-suites.fr
+Campanile Alès Centre,Hôtellerie,Alès,ales.centre@campanile.fr
+Hôtel L'Escale d'Alès,Hôtellerie,Alès,contact@escale-ales-hotel.com
+Hôtel Uzès Pont du Gard,Hôtellerie,Uzès,reception@hoteluzes.com
+Splendid Hôtel Camargue,Hôtellerie,Le Grau-du-Roi,contact@splendid-camargue.com
+Hôtel du Palais,Hôtellerie,Montpellier,hoteldupalaismontpellier@gmail.com
+Café Hôtel XIX,Hôtellerie,Béziers,hello@hoteldixneuf.com
+Le Grand Hôtel de Sète,Hôtellerie,Sète,info@legrandhotelsete.com
+Hôtel Imperial,Hôtellerie,Sète,contact@hotel-imperial-sete.com
+Hôtel le Venezia,Hôtellerie,Sète,info@hotel-sete.com
+Margaret Hôtel Chouleur,Hôtellerie,Nîmes,contact@margaret-hotelchouleur.fr
+Hôtel Ulysse,Hôtellerie,Montpellier,resa@hotel-ulysse.fr
+Hôtel Prime,Hôtellerie,Montpellier,hotel.prime@wanadoo.fr
+Bistrot de l'Hôtel de Ville,Hôtellerie,Béziers,contact@bistrotbeziers.fr
+Hôtel Gil de France,Hôtellerie,Cap d'Agde,contact@gildefrance.fr
+Hôtel Neptune,Hôtellerie,Carnon,contact@hotel-neptune.fr
+Hôtel de Paris,Hôtellerie,Sète,contact@hoteldeparis-sete.com
+Hôtel Azur,Hôtellerie,Cap d'Agde,contact@hotelazur.com
+Hôtel La Voile d'Or,Hôtellerie,Cap d'Agde,hotel@lavoiledor.com
+Hôtel Grand Cap,Hôtellerie,Agde,info@hotel-grandcap.com
+BW Hôtel des Thermes,Hôtellerie,Balaruc-les-Bains,contact@bwhoteldesthermes.com
+Hôtel Point Bleu,Hôtellerie,Frontignan,hotelpointbleu@orange.fr
+Mon P'tit Hôtel,Hôtellerie,Le Grau d'Agde,contact@mpth.fr
+Hôtel Les Dunes,Hôtellerie,Marseillan,hotel-les-dunes@wanadoo.fr
+Hôtel Le Richmont,Hôtellerie,Marseillan,richmonthotel@orange.fr
+Hôtel Le Petit Baigneur,Hôtellerie,Palavas-les-Flots,hotellepetitbaigneur@gmail.com
+Hôtel Port Marine,Hôtellerie,Sète,contact@hotel-port-marine.com
+Hôtel Les Grenadines,Hôtellerie,Cap d'Agde,contact@hotelgrenadines.com
+Boutique Hôtel l'Orque Bleue,Hôtellerie,Sète,contact@orquebleue.fr
+Hôtel Entraigues,Hôtellerie,Uzès,info@hotel-entraigues.com
+Hôtel Le Maray,Hôtellerie,Le Grau-du-Roi,lemarayhotel@orange.fr
+Hôtel La Magnaneraie,Hôtellerie,Villeneuve-lès-Avignon,contact@najeti.fr
+Logis Hôtel Le Cours,Hôtellerie,Saint-Gilles,contact@hotel-le-cours.com
+Hôtel Héraclée,Hôtellerie,Saint-Gilles,contact@hotel-heraclee.com
 NIMEA,Immobilier,Nîmes,contact@nimea.fr
 Montaury Immobilier,Immobilier,Nîmes,contact@montaury-immobilier.com
 Corinne Ponce Immobilier,Immobilier,Nîmes,agence@corinneponce.com
