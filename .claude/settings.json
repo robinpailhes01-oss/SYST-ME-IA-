@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Gmail__create_draft",
+      "mcp__Gmail__list_drafts",
+      "mcp__06ea29f3-937a-44c5-a0f1-c4252748ee1c__create_draft"
+    ]
+  }
+}
